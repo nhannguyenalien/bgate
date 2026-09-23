@@ -13,6 +13,11 @@ Authenticated application endpoints require `X-API-Key`:
 - `POST /v1/webhooks/{btcpay|whop|gumroad}` receives provider events.
 - `GET /healthz` and `GET /readyz` are operational probes.
 
+The read-only operations dashboard is available at `/admin`. Configure
+`ADMIN_USERNAME`, `ADMIN_PASSWORD`, and a long random `ADMIN_SESSION_SECRET` before
+deployment. Its signed login cookie is HTTP-only, secure in production, and expires
+after 12 hours.
+
 Example:
 
 ```bash
@@ -61,4 +66,3 @@ the provider dashboard sandbox. BTCPay is implemented directly against Greenfiel
 - Rotate `INTERNAL_API_KEY` and provider secrets periodically.
 - Backups and point-in-time recovery are managed in Neon.
 - Webhook delivery IDs are unique per provider, making retries idempotent.
-

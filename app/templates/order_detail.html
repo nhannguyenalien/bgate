@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ order.product }} · BGate{% endblock %}
+{% block content %}
+<a class="back" href="/admin">← Quay lại đơn hàng</a>
+<header class="page-header"><div><p class="eyebrow">Chi tiết đơn hàng</p><h1>{{ order.product }}</h1><p class="mono muted">{{ order.id }}</p></div><span class="status status-{{ order.status.value }}">{{ order.status.value }}</span></header>
+<section class="detail-grid">
+  <article class="panel detail-list"><h2>Thanh toán</h2><dl><dt>Khách hàng</dt><dd>{{ order.user_id }}</dd><dt>Provider</dt><dd>{{ order.provider }}</dd><dt>Provider ID</dt><dd class="mono">{{ order.provider_payment_id or '—' }}</dd><dt>Số tiền</dt><dd>{{ order.amount }} {{ order.currency }}</dd><dt>Tạo lúc</dt><dd>{{ order.created_at.strftime('%d/%m/%Y %H:%M:%S') }}</dd><dt>Cập nhật</dt><dd>{{ order.updated_at.strftime('%d/%m/%Y %H:%M:%S') }}</dd></dl>{% if order.checkout_url %}<a class="primary button" href="{{ order.checkout_url }}" target="_blank" rel="noreferrer">Mở checkout ↗</a>{% endif %}</article>
+  <article class="panel"><h2>Metadata</h2><pre>{{ order.metadata_json | tojson(indent=2) }}</pre></article>
+</section>
+<section class="panel"><h2>Webhook của đơn này</h2><div class="table-wrap"><table><thead><tr><th>Event</th><th>Provider</th><th>Delivery ID</th><th>Nhận lúc</th></tr></thead><tbody>{% for event in events %}<tr><td>{{ event.event_type }}</td><td>{{ event.provider }}</td><td class="mono">{{ event.delivery_id }}</td><td>{{ event.received_at.strftime('%d/%m/%Y %H:%M:%S') }}</td></tr>{% else %}<tr><td colspan="4" class="empty">Chưa có webhook.</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}

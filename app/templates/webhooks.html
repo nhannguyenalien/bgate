@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Webhooks · BGate{% endblock %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">Event stream</p><h1>Webhooks</h1></div></header>
+<section class="panel"><div class="table-wrap"><table><thead><tr><th>Event</th><th>Provider</th><th>Delivery ID</th><th>Order</th><th>Nhận lúc</th></tr></thead><tbody>{% for event in events %}<tr><td>{{ event.event_type }}</td><td><span class="provider">{{ event.provider }}</span></td><td class="mono">{{ event.delivery_id }}</td><td>{% if event.order_id %}<a class="mono" href="/admin/orders/{{ event.order_id }}">{{ event.order_id|string|truncate(13, True, '…') }}</a>{% else %}—{% endif %}</td><td>{{ event.received_at.strftime('%d/%m/%Y %H:%M') }}</td></tr>{% else %}<tr><td colspan="5" class="empty">Chưa nhận webhook nào.</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}

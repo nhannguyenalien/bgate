@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>{% block title %}BGate{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/admin.css') }}">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="/admin"><span class="brand-mark">B</span><span>BGate</span></a>
+      <p class="eyebrow">Billing Router</p>
+      <nav>
+        <a class="{{ 'active' if section == 'orders' }}" href="/admin">Đơn hàng</a>
+        <a class="{{ 'active' if section == 'entitlements' }}" href="/admin/entitlements">Quyền truy cập</a>
+        <a class="{{ 'active' if section == 'webhooks' }}" href="/admin/webhooks">Webhooks</a>
+        <a href="/docs" target="_blank">API Docs ↗</a>
+      </nav>
+      <form action="/admin/logout" method="post" class="logout"><button type="submit">Đăng xuất</button></form>
+    </aside>
+    <main class="content">{% block content %}{% endblock %}</main>
+  </div>
+</body>
+</html>

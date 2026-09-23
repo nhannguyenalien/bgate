@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Đơn hàng · BGate{% endblock %}
+{% block content %}
+<header class="page-header"><div><p class="eyebrow">Tổng quan</p><h1>Đơn hàng</h1></div><span class="live"><i></i> Hệ thống hoạt động</span></header>
+<section class="stats">
+  <article><span>Tổng đơn</span><strong>{{ total_orders }}</strong><small>Tất cả nhà cung cấp</small></article>
+  <article><span>Đã thanh toán</span><strong>{{ status_counts.get('paid', 0) }}</strong><small>Entitlement được cấp</small></article>
+  <article><span>Đang chờ</span><strong>{{ status_counts.get('pending', 0) + status_counts.get('processing', 0) }}</strong><small>Pending + processing</small></article>
+  <article><span>Quyền đang mở</span><strong>{{ active_entitlements }}</strong><small>{{ webhook_count }} webhook đã nhận</small></article>
+</section>
+<section class="panel">
+  <form class="filters" method="get">
+    <input name="q" value="{{ q }}" placeholder="Tìm user hoặc sản phẩm…">
+    <select name="provider"><option value="">Mọi provider</option>{% for value in ['btcpay','whop','gumroad'] %}<option value="{{ value }}" {{ 'selected' if provider == value }}>{{ value|upper }}</option>{% endfor %}</select>
+    <select name="payment_status"><option value="">Mọi trạng thái</option>{% for value in statuses %}<option value="{{ value.value }}" {{ 'selected' if payment_status == value.value }}>{{ value.value }}</option>{% endfor %}</select>
+    <button type="submit">Lọc</button>{% if q or provider or payment_status %}<a class="clear" href="/admin">Xóa lọc</a>{% endif %}
+  </form>
+  <div class="table-wrap"><table><thead><tr><th>Đơn hàng</th><th>Khách hàng</th><th>Provider</th><th>Số tiền</th><th>Trạng thái</th><th>Thời gian</th></tr></thead><tbody>
+  {% for order in orders %}<tr><td><a class="order-link" href="/admin/orders/{{ order.id }}">{{ order.product }}</a><small class="mono">{{ order.id|string|truncate(13, True, '…') }}</small></td><td>{{ order.user_id }}</td><td><span class="provider">{{ order.provider }}</span></td><td class="amount">{{ order.amount }} {{ order.currency }}</td><td><span class="status status-{{ order.status.value }}">{{ order.status.value }}</span></td><td>{{ order.created_at.strftime('%d/%m/%Y %H:%M') }}</td></tr>
+  {% else %}<tr><td colspan="6" class="empty">Chưa có đơn hàng phù hợp.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}

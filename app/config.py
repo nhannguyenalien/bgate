@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://bgate:bgate@db:5432/bgate"
     internal_api_key: SecretStr = SecretStr("change-me")
     public_base_url: str = "http://localhost:8000"
+    admin_username: str = "admin"
+    admin_password: SecretStr = SecretStr("")
+    admin_session_secret: SecretStr = SecretStr("")
 
     btcpay_url: str = ""
     btcpay_store_id: str = ""
