@@ -13,7 +13,6 @@ def upgrade():
     payment_status = sa.Enum(
         "pending", "processing", "paid", "expired", "cancelled", "failed", "refunded", name="paymentstatus"
     )
-    payment_status.create(op.get_bind(), checkfirst=True)
     op.create_table(
         "orders",
         sa.Column("id", sa.Uuid(), primary_key=True),
