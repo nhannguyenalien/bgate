@@ -13,10 +13,24 @@ Authenticated application endpoints require `X-API-Key`:
 - `POST /v1/webhooks/{btcpay|whop|gumroad}` receives provider events.
 - `GET /healthz` and `GET /readyz` are operational probes.
 
-The read-only operations dashboard is available at `/admin`. Configure
+The legacy read-only operations dashboard is available at `/admin`. Configure
 `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and a long random `ADMIN_SESSION_SECRET` before
 deployment. Its signed login cookie is HTTP-only, secure in production, and expires
 after 12 hours.
+
+## Next.js dashboard on Cloudflare Pages
+
+The production dashboard lives in `web/`. It is a static Next.js export using
+Tabler UI, with Cloudflare Pages Functions handling the admin session and proxying
+read-only requests to `/v1/admin/*`. Secrets never enter the browser bundle.
+
+Configure these Pages variables and encrypted secrets:
+
+- Variable: `API_BASE_URL=https://billing.schoolsai.work`
+- Secrets: `INTERNAL_API_KEY`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_SECRET`
+
+Build with `npm run build` from `web/` and publish the `out/` directory. For local
+development, copy `.dev.vars.example` to `.dev.vars` and use non-production values.
 
 Example:
 

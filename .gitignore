@@ -1,8 +1,12 @@
 .env
+.DS_Store
+web/.next/
+web/out/
+web/node_modules/
+web/.dev.vars
 .venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
 .DS_Store
-

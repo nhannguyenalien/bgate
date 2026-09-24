@@ -1,14 +1,15 @@
-import secrets
 from contextlib import asynccontextmanager
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin import router as admin_router
+from app.admin_api import router as admin_api_router
+from app.auth import require_api_key
 from app.config import Settings, get_settings
 from app.core import create_checkout, process_webhook
 from app.db import engine, get_session
@@ -25,12 +26,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title="BGate Billing Router", version="0.1.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(admin_router)
-
-
-def require_api_key(x_api_key: str = Header(default=""), settings: Settings = Depends(get_settings)) -> None:
-    expected = settings.internal_api_key.get_secret_value()
-    if not expected or not secrets.compare_digest(x_api_key, expected):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid API key")
+app.include_router(admin_api_router)
 
 
 @app.get("/", include_in_schema=False)
