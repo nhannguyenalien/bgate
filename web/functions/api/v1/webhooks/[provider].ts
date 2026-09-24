@@ -13,6 +13,7 @@ export async function onRequestPost({ request, env, params }: Context): Promise<
   catch (error) { return json({ error: error instanceof Error ? error.message : "invalid webhook" }, 401); }
   const sql = database(env);
   let orders = await sql`SELECT * FROM orders WHERE provider = ${provider} AND provider_payment_id = ${event.paymentId} LIMIT 1`;
+  if (!orders.length && provider === "whop" && event.orderId) orders = await sql`SELECT * FROM orders WHERE provider = 'whop' AND id::text = ${event.orderId} LIMIT 1`;
   if (!orders.length && provider === "gumroad") orders = await sql`SELECT * FROM orders WHERE id::text = ${event.paymentId} LIMIT 1`;
   const order = orders[0];
   try {

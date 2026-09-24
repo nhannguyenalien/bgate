@@ -1,10 +1,10 @@
 import type { Env } from "./auth";
-import { constantTimeEqual, hmacSha256 } from "./security";
+import { constantTimeEqual, hmacSha256, hmacSha256Base64 } from "./security";
 
 export type PaymentStatus = "pending" | "processing" | "paid" | "expired" | "cancelled" | "failed" | "refunded";
 export type CheckoutInput = { orderId: string; product: string; amount: string; currency: string; userId: string; successUrl?: string; metadata: Record<string, unknown> };
 export type CheckoutResult = { paymentId: string; checkoutUrl: string; status: PaymentStatus };
-export type WebhookResult = { deliveryId: string; eventType: string; paymentId: string; status: PaymentStatus | null; payload: Record<string, unknown> };
+export type WebhookResult = { deliveryId: string; eventType: string; paymentId: string; orderId?: string; status: PaymentStatus | null; payload: Record<string, unknown> };
 
 const btcpayStatus: Record<string, PaymentStatus> = { New: "pending", Processing: "processing", Settled: "paid", Expired: "expired", Invalid: "failed" };
 const btcpayEvent: Record<string, PaymentStatus> = { InvoiceProcessing: "processing", InvoiceSettled: "paid", InvoiceExpired: "expired", InvoiceInvalid: "failed" };
@@ -27,11 +27,29 @@ export async function createProviderCheckout(provider: string, input: CheckoutIn
     return { paymentId: data.id, checkoutUrl: data.checkoutLink, status: btcpayStatus[data.status] || "pending" };
   }
   if (provider === "whop") {
-    if (!env.WHOP_API_KEY) throw new Error("Whop is not configured");
-    const payload: Record<string, unknown> = { plan_id: input.product, metadata: { ...input.metadata, order_id: input.orderId, user_id: input.userId } };
+    if (!env.WHOP_API_KEY || !env.WHOP_ACCOUNT_ID) throw new Error("Whop is not configured");
+    let payload: Record<string, unknown>;
+    if (input.product.startsWith("plan_")) {
+      payload = { account_id: env.WHOP_ACCOUNT_ID, plan_id: input.product };
+    } else if (input.product.startsWith("prod_")) {
+      payload = {
+        account_id: env.WHOP_ACCOUNT_ID,
+        plan: {
+          account_id: env.WHOP_ACCOUNT_ID,
+          product_id: input.product,
+          plan_type: "one_time",
+          initial_price: Number(input.amount),
+          currency: input.currency.toLowerCase(),
+          release_method: "buy_now",
+        },
+      };
+    } else {
+      throw new Error("Whop product must be a plan_ or prod_ ID");
+    }
+    payload.metadata = { ...input.metadata, order_id: input.orderId, user_id: input.userId, product: input.product };
     if (input.successUrl) payload.redirect_url = input.successUrl;
-    const response = await fetch(`${(env.WHOP_API_URL || "https://api.whop.com/api/v5").replace(/\/$/, "")}/checkout_configurations`, {
-      method: "POST", headers: { authorization: `Bearer ${env.WHOP_API_KEY}`, "content-type": "application/json" }, body: JSON.stringify(payload),
+    const response = await fetch(`${(env.WHOP_API_URL || "https://api.whop.com/api/v1").replace(/\/$/, "")}/checkout_configurations`, {
+      method: "POST", headers: { authorization: `Bearer ${env.WHOP_API_KEY}`, "content-type": "application/json", "api-version-date": env.WHOP_API_VERSION_DATE || "2026-08-14" }, body: JSON.stringify(payload),
     });
     if (!response.ok) throw new Error(`Whop returned ${response.status}`);
     const data = await response.json() as { id: string; purchase_url?: string; checkout_url?: string };
@@ -55,14 +73,24 @@ export async function parseProviderWebhook(provider: string, body: ArrayBuffer, 
   }
   if (provider === "whop") {
     if (!env.WHOP_WEBHOOK_SECRET) throw new Error("Whop webhook secret is not configured");
-    if (!await constantTimeEqual(headers.get("x-bgate-signature") || "", await hmacSha256(env.WHOP_WEBHOOK_SECRET, body))) throw new Error("invalid Whop signature");
+    const deliveryId = headers.get("webhook-id") || "";
+    const timestamp = headers.get("webhook-timestamp") || "";
+    const signatures = (headers.get("webhook-signature") || "").split(" ").map(value => value.trim());
+    const timestampSeconds = Number(timestamp);
+    if (!deliveryId || !Number.isFinite(timestampSeconds) || Math.abs(Date.now() / 1000 - timestampSeconds) > 300) throw new Error("invalid Whop timestamp");
+    const expected = `v1,${await hmacSha256Base64(env.WHOP_WEBHOOK_SECRET, `${deliveryId}.${timestamp}.${text}`)}`;
+    let validSignature = false;
+    for (const signature of signatures) validSignature ||= await constantTimeEqual(signature, expected);
+    if (!validSignature) throw new Error("invalid Whop signature");
     const data = JSON.parse(text) as Record<string, unknown>;
     const object = (typeof data.data === "object" && data.data ? data.data : data) as Record<string, unknown>;
+    const metadata = (typeof object.metadata === "object" && object.metadata ? object.metadata : {}) as Record<string, unknown>;
     const event = String(data.type || "unknown");
     const paymentId = String(object.checkout_configuration_id || object.payment_id || object.id || "");
-    let status: PaymentStatus | null = ["payment.succeeded", "membership.activated"].includes(event) ? "paid" : null;
-    if (["payment.failed", "membership.deactivated"].includes(event)) status = "failed";
-    return { deliveryId: String(data.id || paymentId), eventType: event, paymentId, status, payload: data };
+    let status: PaymentStatus | null = event === "payment.succeeded" ? "paid" : null;
+    if (event === "payment.failed") status = "failed";
+    if (event === "payment.canceled") status = "cancelled";
+    return { deliveryId, eventType: event, paymentId, orderId: metadata.order_id ? String(metadata.order_id) : undefined, status, payload: data };
   }
   if (provider === "gumroad") {
     if (env.GUMROAD_WEBHOOK_SECRET && !await constantTimeEqual(headers.get("x-bgate-signature") || "", await hmacSha256(env.GUMROAD_WEBHOOK_SECRET, body))) throw new Error("invalid Gumroad signature");

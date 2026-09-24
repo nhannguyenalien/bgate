@@ -9,7 +9,9 @@ export interface Env {
   BTCPAY_API_KEY?: string;
   BTCPAY_WEBHOOK_SECRET?: string;
   WHOP_API_URL?: string;
+  WHOP_API_VERSION_DATE?: string;
   WHOP_API_KEY?: string;
+  WHOP_ACCOUNT_ID?: string;
   WHOP_WEBHOOK_SECRET?: string;
   GUMROAD_BASE_URL?: string;
   GUMROAD_WEBHOOK_SECRET?: string;
