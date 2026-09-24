@@ -80,7 +80,7 @@ export default function Dashboard() {
             <button className={`nav-link ${section === "orders" ? "active" : ""}`} onClick={() => changeSection("orders")}><IconDashboard /> <span>Đơn hàng</span></button>
             <button className={`nav-link ${section === "entitlements" ? "active" : ""}`} onClick={() => changeSection("entitlements")}><IconKey /> <span>Quyền truy cập</span></button>
             <button className={`nav-link ${section === "webhooks" ? "active" : ""}`} onClick={() => changeSection("webhooks")}><IconWebhook /> <span>Webhooks</span></button>
-            <a className="nav-link" href="https://billing.schoolsai.work/docs" target="_blank" rel="noreferrer"><IconBook2 /> <span>API Docs</span></a>
+            <a className="nav-link" href="https://apibill.schoolsai.work/docs" target="_blank" rel="noreferrer"><IconBook2 /> <span>API Docs</span></a>
           </div>
           <button className="nav-link logout-link" onClick={logout}><IconLogout /> <span>Đăng xuất</span></button>
         </div>
