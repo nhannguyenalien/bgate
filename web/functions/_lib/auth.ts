@@ -15,6 +15,10 @@ export interface Env {
   WHOP_WEBHOOK_SECRET?: string;
   GUMROAD_BASE_URL?: string;
   GUMROAD_WEBHOOK_SECRET?: string;
+  TRONGRID_API_KEY?: string;
+  TRON_USDT_RECEIVE_ADDRESS?: string;
+  TRON_USDT_CONTRACT?: string;
+  BILLING_PUBLIC_URL?: string;
 }
 
 const COOKIE = "bgate_pages_admin";

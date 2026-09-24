@@ -3,13 +3,42 @@ import { constantTimeEqual, hmacSha256, hmacSha256Base64 } from "./security";
 
 export type PaymentStatus = "pending" | "processing" | "paid" | "expired" | "cancelled" | "failed" | "refunded";
 export type CheckoutInput = { orderId: string; product: string; amount: string; currency: string; userId: string; successUrl?: string; metadata: Record<string, unknown> };
-export type CheckoutResult = { paymentId: string; checkoutUrl: string; status: PaymentStatus };
+export type CheckoutResult = { paymentId: string; checkoutUrl: string; status: PaymentStatus; metadata?: Record<string, unknown> };
 export type WebhookResult = { deliveryId: string; eventType: string; paymentId: string; orderId?: string; status: PaymentStatus | null; payload: Record<string, unknown> };
 
 const btcpayStatus: Record<string, PaymentStatus> = { New: "pending", Processing: "processing", Settled: "paid", Expired: "expired", Invalid: "failed" };
 const btcpayEvent: Record<string, PaymentStatus> = { InvoiceProcessing: "processing", InvoiceSettled: "paid", InvoiceExpired: "expired", InvoiceInvalid: "failed" };
 
 export async function createProviderCheckout(provider: string, input: CheckoutInput, env: Env): Promise<CheckoutResult> {
+  if (provider === "usdt") {
+    if (!env.TRONGRID_API_KEY || !env.TRON_USDT_RECEIVE_ADDRESS) throw new Error("USDT TRON is not configured");
+    if (!/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(env.TRON_USDT_RECEIVE_ADDRESS)) throw new Error("invalid TRON receive address");
+    if (!["USD", "USDT"].includes(input.currency)) throw new Error("USDT checkout only accepts USD or USDT amounts");
+    const baseAtomic = toUsdtAtomic(input.amount);
+    // Add a sub-cent discriminator so concurrent orders with the same price can
+    // be matched without asking for a memo (TRC20 transfers do not carry one).
+    const offset = (Number.parseInt(input.orderId.replaceAll("-", "").slice(0, 8), 16) % 9_900) + 100;
+    const expectedAtomic = baseAtomic + BigInt(offset);
+    const expectedAmount = formatUsdtAtomic(expectedAtomic);
+    const token = crypto.randomUUID().replaceAll("-", "");
+    const publicBase = (env.BILLING_PUBLIC_URL || "https://billing.schoolsai.work").replace(/\/$/, "");
+    const checkoutUrl = `${publicBase}/pay/usdt/?order=${encodeURIComponent(input.orderId)}&token=${token}`;
+    return {
+      paymentId: input.orderId,
+      checkoutUrl,
+      status: "pending",
+      metadata: {
+        ...input.metadata,
+        network: "TRON",
+        asset: "USDT",
+        receive_address: env.TRON_USDT_RECEIVE_ADDRESS,
+        expected_amount: expectedAmount,
+        expected_amount_atomic: expectedAtomic.toString(),
+        checkout_token: token,
+        expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      },
+    };
+  }
   if (provider === "gumroad") {
     const base = (env.GUMROAD_BASE_URL || "https://gumroad.com").replace(/\/$/, "");
     const query = new URLSearchParams({ wanted: "true", quantity: "1", order_id: input.orderId, user_id: input.userId });
@@ -56,6 +85,20 @@ export async function createProviderCheckout(provider: string, input: CheckoutIn
     return { paymentId: String(data.id), checkoutUrl: data.purchase_url || data.checkout_url || "", status: "pending" };
   }
   throw new Error("unsupported provider");
+}
+
+function toUsdtAtomic(amount: string): bigint {
+  if (!/^\d+(\.\d{1,6})?$/.test(amount)) throw new Error("USDT amount must have at most 6 decimals");
+  const [whole, fraction = ""] = amount.split(".");
+  const atomic = BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, "0"));
+  if (atomic <= 0n) throw new Error("USDT amount must be greater than zero");
+  return atomic;
+}
+
+function formatUsdtAtomic(value: bigint): string {
+  const whole = value / 1_000_000n;
+  const fraction = (value % 1_000_000n).toString().padStart(6, "0").replace(/0+$/, "");
+  return fraction ? `${whole}.${fraction}` : whole.toString();
 }
 
 function formPayload(body: ArrayBuffer): Record<string, unknown> {

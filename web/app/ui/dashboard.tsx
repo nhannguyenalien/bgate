@@ -104,7 +104,7 @@ export default function Dashboard() {
             <div className="card">
               <div className="card-header filter-header"><form className="row g-2 w-100" onSubmit={submitFilters}>
                 <div className="col-lg"><div className="input-icon"><span className="input-icon-addon"><IconSearch size={18} /></span><input className="form-control" placeholder="Tìm user hoặc sản phẩm…" value={filters.q} onChange={e => setFilters({ ...filters, q: e.target.value })} /></div></div>
-                <div className="col-lg-auto"><select className="form-select" value={filters.provider} onChange={e => setFilters({ ...filters, provider: e.target.value })}><option value="">Mọi provider</option><option value="btcpay">BTCPay</option><option value="whop">Whop</option><option value="gumroad">Gumroad</option></select></div>
+                <div className="col-lg-auto"><select className="form-select" value={filters.provider} onChange={e => setFilters({ ...filters, provider: e.target.value })}><option value="">Mọi provider</option><option value="usdt">USDT-TRC20</option><option value="btcpay">BTCPay</option><option value="whop">Whop</option><option value="gumroad">Gumroad</option></select></div>
                 <div className="col-lg-auto"><select className="form-select" value={filters.payment_status} onChange={e => setFilters({ ...filters, payment_status: e.target.value })}><option value="">Mọi trạng thái</option>{["pending", "processing", "paid", "expired", "cancelled", "failed", "refunded"].map(x => <option key={x}>{x}</option>)}</select></div>
                 <div className="col-lg-auto"><button className="btn btn-primary">Lọc</button></div>
               </form></div>

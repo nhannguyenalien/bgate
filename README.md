@@ -1,7 +1,7 @@
 # BGate
 
 Thin billing router that normalizes BTCPay Server, Whop, and Gumroad into one API.
-It never holds wallet keys or signs blockchain transactions.
+It never holds wallet keys or signs blockchain transactions. USDT-TRC20 payments are received by a configured watch-only address and verified through confirmed TronGrid transfers.
 
 ## API
 
