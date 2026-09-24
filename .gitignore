@@ -4,6 +4,8 @@ web/.next/
 web/out/
 web/node_modules/
 web/.dev.vars
+web/.wrangler/
+web/*.tsbuildinfo
 .venv/
 __pycache__/
 *.py[cod]
