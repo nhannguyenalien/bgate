@@ -7,27 +7,30 @@ It never holds wallet keys or signs blockchain transactions.
 
 Authenticated application endpoints require `X-API-Key`:
 
-- `POST /v1/checkout` creates an order and provider checkout.
-- `GET /v1/payments/{order_id}` returns normalized payment state.
-- `GET /v1/entitlements/{user_id}/{product}` checks access.
-- `POST /v1/webhooks/{btcpay|whop|gumroad}` receives provider events.
-- `GET /healthz` and `GET /readyz` are operational probes.
+- `POST /api/v1/checkout` creates an order and provider checkout.
+- `GET /api/v1/payments/{order_id}` returns normalized payment state.
+- `GET /api/v1/entitlements/{user_id}/{product}` checks access.
+- `POST /api/v1/webhooks/{btcpay|whop|gumroad}` receives provider events.
+- `GET /api/healthz` and `GET /api/readyz` are operational probes.
 
-The legacy read-only operations dashboard is available at `/admin`. Configure
-`ADMIN_USERNAME`, `ADMIN_PASSWORD`, and a long random `ADMIN_SESSION_SECRET` before
+The read-only operations dashboard is available at `/`. Configure
+`ADMIN_USERNAME`, `ADMIN_PASSWORD`, and a long random `SESSION_SECRET` before
 deployment. Its signed login cookie is HTTP-only, secure in production, and expires
 after 12 hours.
 
 ## Next.js dashboard on Cloudflare Pages
 
-The production dashboard lives in `web/`. It is a static Next.js export using
-Tabler UI, with Cloudflare Pages Functions handling the admin session and proxying
-read-only requests to `/v1/admin/*`. Secrets never enter the browser bundle.
+The production app lives in `web/`. It is a static Next.js export using Tabler UI,
+with Cloudflare Pages Functions implementing the billing API, admin session, webhook
+normalization, and direct Neon access. Secrets never enter the browser bundle.
 
 Configure these Pages variables and encrypted secrets:
 
-- Variable: `API_BASE_URL=https://billing.schoolsai.work`
-- Secrets: `INTERNAL_API_KEY`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_SECRET`
+- Required secrets: `DATABASE_URL`, `INTERNAL_API_KEY`, `ADMIN_USERNAME`,
+  `ADMIN_PASSWORD`, `SESSION_SECRET`
+- Provider secrets as enabled: `BTCPAY_URL`, `BTCPAY_STORE_ID`, `BTCPAY_API_KEY`,
+  `BTCPAY_WEBHOOK_SECRET`, `WHOP_API_KEY`, `WHOP_WEBHOOK_SECRET`,
+  `GUMROAD_WEBHOOK_SECRET`
 
 Build with `npm run build` from `web/` and publish the `out/` directory. For local
 development, copy `.dev.vars.example` to `.dev.vars` and use non-production values.
@@ -35,23 +38,24 @@ development, copy `.dev.vars.example` to `.dev.vars` and use non-production valu
 Example:
 
 ```bash
-curl -X POST https://billing.schoolsai.work/v1/checkout \
+curl -X POST https://billing.schoolsai.work/api/v1/checkout \
   -H 'Content-Type: application/json' \
   -H "X-API-Key: $INTERNAL_API_KEY" \
   -d '{"product":"itsupport-pro","user_id":"123","provider":"crypto","amount":"19","currency":"USD"}'
 ```
 
-## Run
+## Local development
 
 ```bash
-cp .env.example .env
-# Fill secrets in .env; never commit it.
-docker compose up -d --build
-curl http://127.0.0.1:8000/readyz
+cd web
+cp .dev.vars.example .dev.vars
+npm install
+npm run build
+npm run pages:dev
 ```
 
-The Compose stack intentionally contains only the API and a one-shot migration job.
-PostgreSQL is external (Neon in production).
+The Python/Compose implementation is retained only as migration history and is not
+part of the production path. PostgreSQL is external (Neon in production).
 
 ## Provider setup
 
@@ -59,7 +63,7 @@ PostgreSQL is external (Neon in production).
 
 Create a store-scoped API key with only `btcpay.store.cancreateinvoice` and
 `btcpay.store.canviewinvoices`. Do **not** grant transaction-signing permissions.
-Create a webhook for `https://billing.schoolsai.work/v1/webhooks/btcpay`, enable
+Create a webhook for `https://billing.schoolsai.work/api/v1/webhooks/btcpay`, enable
 automatic redelivery, and put its secret in `BTCPAY_WEBHOOK_SECRET`.
 
 ### Whop and Gumroad
@@ -76,7 +80,7 @@ the provider dashboard sandbox. BTCPay is implemented directly against Greenfiel
 
 ## Deployment notes
 
-- Terminate TLS at Caddy/Nginx/Cloudflare and proxy to `127.0.0.1:8000`.
+- Cloudflare Pages serves both the static Next.js UI and `/api/*` Functions.
 - Rotate `INTERNAL_API_KEY` and provider secrets periodically.
 - Backups and point-in-time recovery are managed in Neon.
 - Webhook delivery IDs are unique per provider, making retries idempotent.

@@ -1,9 +1,18 @@
 export interface Env {
-  API_BASE_URL: string;
+  DATABASE_URL: string;
   INTERNAL_API_KEY: string;
   ADMIN_USERNAME: string;
   ADMIN_PASSWORD: string;
   SESSION_SECRET: string;
+  BTCPAY_URL?: string;
+  BTCPAY_STORE_ID?: string;
+  BTCPAY_API_KEY?: string;
+  BTCPAY_WEBHOOK_SECRET?: string;
+  WHOP_API_URL?: string;
+  WHOP_API_KEY?: string;
+  WHOP_WEBHOOK_SECRET?: string;
+  GUMROAD_BASE_URL?: string;
+  GUMROAD_WEBHOOK_SECRET?: string;
 }
 
 const COOKIE = "bgate_pages_admin";
