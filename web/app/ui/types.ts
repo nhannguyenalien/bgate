@@ -42,4 +42,6 @@ export type DashboardData = {
   };
 };
 
-export type Section = "orders" | "entitlements" | "webhooks";
+export type ApiClient = { id: string; name: string; mode: "test" | "live"; key_prefix: string; webhook_url: string | null; active: boolean; rate_limit_per_minute: number; last_used_at: string | null; created_at: string };
+
+export type Section = "orders" | "entitlements" | "webhooks" | "clients";

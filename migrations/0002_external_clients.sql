@@ -1,0 +1,11 @@
+BEGIN;
+CREATE TABLE IF NOT EXISTS api_clients (id uuid PRIMARY KEY, name varchar(120) NOT NULL, mode varchar(10) NOT NULL CHECK (mode IN ('test','live')), key_prefix varchar(32) NOT NULL, key_hash varchar(64) NOT NULL UNIQUE, webhook_url varchar(2000), webhook_secret varchar(200), active boolean NOT NULL DEFAULT true, rate_limit_per_minute integer NOT NULL DEFAULT 60, last_used_at timestamptz, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS client_id uuid REFERENCES api_clients(id);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS mode varchar(10) NOT NULL DEFAULT 'live';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS idempotency_key varchar(200);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS request_hash varchar(64);
+CREATE INDEX IF NOT EXISTS ix_orders_client_id ON orders(client_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_orders_client_idempotency ON orders(client_id, mode, idempotency_key);
+CREATE TABLE IF NOT EXISTS api_rate_limits (client_id uuid NOT NULL REFERENCES api_clients(id) ON DELETE CASCADE, bucket timestamptz NOT NULL, request_count integer NOT NULL, PRIMARY KEY (client_id,bucket));
+CREATE TABLE IF NOT EXISTS webhook_deliveries (id uuid PRIMARY KEY, client_id uuid NOT NULL REFERENCES api_clients(id) ON DELETE CASCADE, order_id uuid NOT NULL REFERENCES orders(id) ON DELETE CASCADE, event_type varchar(120) NOT NULL, payload jsonb NOT NULL, status varchar(20) NOT NULL, attempts integer NOT NULL DEFAULT 0, response_status integer, created_at timestamptz NOT NULL DEFAULT now(), delivered_at timestamptz, UNIQUE(order_id,event_type));
+COMMIT;

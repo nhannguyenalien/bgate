@@ -1,6 +1,7 @@
 import { Env, json } from "../../../_lib/auth";
 import { database } from "../../../_lib/db";
 import { parseProviderWebhook } from "../../../_lib/providers";
+import { sendClientWebhook } from "../../../_lib/client-webhooks";
 
 type Context = { request: Request; env: Env; params: { provider: string } };
 
@@ -29,6 +30,7 @@ export async function onRequestPost({ request, env, params }: Context): Promise<
     } else if (["refunded", "cancelled"].includes(event.status)) {
       await sql`UPDATE entitlements SET active = false, updated_at = now() WHERE user_id = ${String(order.user_id)} AND product = ${String(order.product)}`;
     }
+    await sendClientWebhook(sql, env, String(order.id), `order.${event.status}`);
   }
   return json({ accepted: true, processed: true, order_id: order ? String(order.id) : null }, 202);
 }

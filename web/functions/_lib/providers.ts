@@ -136,7 +136,8 @@ export async function parseProviderWebhook(provider: string, body: ArrayBuffer, 
     return { deliveryId, eventType: event, paymentId, orderId: metadata.order_id ? String(metadata.order_id) : undefined, status, payload: data };
   }
   if (provider === "gumroad") {
-    if (env.GUMROAD_WEBHOOK_SECRET && !await constantTimeEqual(headers.get("x-bgate-signature") || "", await hmacSha256(env.GUMROAD_WEBHOOK_SECRET, body))) throw new Error("invalid Gumroad signature");
+    if (!env.GUMROAD_WEBHOOK_SECRET) throw new Error("Gumroad webhook secret is not configured");
+    if (!await constantTimeEqual(headers.get("x-bgate-signature") || "", await hmacSha256(env.GUMROAD_WEBHOOK_SECRET, body))) throw new Error("invalid Gumroad signature");
     let data: Record<string, unknown>;
     try { data = JSON.parse(text); } catch { data = formPayload(body); }
     const event = headers.get("x-gumroad-event") || "sale";
